@@ -13,6 +13,15 @@ const vscode = require("vscode");
 const path = require("path");
 const fs = require("fs");
 exports.excludeSet = new Set(['extends', 'properties', 'statics', 'editor', 'onLoad', 'start', 'update', 'onEnable', 'onDisable', 'onDestroy', 'if', 'else if', 'for', 'function', 'new', 'return', 'switch', 'throw', 'while']);
+function getWorkDir() {
+    var _a;
+    const workDir = ((_a = vscode.workspace.workspaceFolders) === null || _a === void 0 ? void 0 : _a[0].uri.path) || "";
+    console.log(workDir);
+    return workDir;
+}
+function getServerByFilePath(filePath) {
+    let regex = new RegExp(getWorkDir() + "/.*/(\\w*)_server/", "");
+}
 function updateFileMap() {
     var _a;
     exports.fileMap = {};
@@ -20,11 +29,7 @@ function updateFileMap() {
     if (!document) {
         return;
     }
-    const result = document.fileName.match(/.+assets\//);
-    if (!result) {
-        return;
-    }
-    const workDir = result[0];
+    const workDir = getWorkDir();
     const walkDir = (currentPath) => {
         const files = fs.readdirSync(currentPath);
         files.forEach(fileName => {
@@ -40,6 +45,7 @@ function updateFileMap() {
         });
     };
     walkDir(workDir);
+    console.log("updateFileMap fileMap: ", exports.fileMap);
 }
 exports.updateFileMap = updateFileMap;
 function getFilePath(key) {

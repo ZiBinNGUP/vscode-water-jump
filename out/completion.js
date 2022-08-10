@@ -16,6 +16,8 @@ function registerCompletion(context) {
         provideCompletionItems: (document, position, token, context) => __awaiter(this, void 0, void 0, function* () {
             const line = document.lineAt(position);
             const lineText = line.text.substring(0, position.character - 1);
+            let symbols = yield utils_1.getSymbols(document);
+            console.log("symbols: ", symbols[0]);
             const result = lineText.match(/\w+$|(?<=getComponent\("|')\w+/);
             if (!result) {
                 return;

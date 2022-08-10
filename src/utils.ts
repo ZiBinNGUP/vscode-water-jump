@@ -4,18 +4,23 @@ import * as fs from 'fs';
 
 export let fileMap: { [name: string]: string };
 export const excludeSet = new Set(['extends', 'properties', 'statics', 'editor', 'onLoad', 'start', 'update', 'onEnable', 'onDisable', 'onDestroy', 'if', 'else if', 'for', 'function', 'new', 'return', 'switch', 'throw', 'while']);
+function getWorkDir() {
+	const workDir = vscode.workspace.workspaceFolders?.[0].uri.path || "";
+	console.log(workDir);
+	return workDir;
+}
+function getServerByFilePath(filePath: string) {
+	let regex = new RegExp(getWorkDir() + "/.*/(\\w*)_server/", "");
+	
 
+}
 export function updateFileMap() {
 	fileMap = {};
 	const document = vscode.window.activeTextEditor?.document;
 	if (!document) {
 		return;
 	}
-	const result = document.fileName.match(/.+assets\//);
-	if (!result) {
-		return;
-	}
-	const workDir = result[0];
+	const workDir = getWorkDir();
 	const walkDir = (currentPath: string) => {
 		const files = fs.readdirSync(currentPath);
 		files.forEach(fileName => {
@@ -30,6 +35,7 @@ export function updateFileMap() {
 		});
 	};
 	walkDir(workDir);
+	console.log("updateFileMap fileMap: ", fileMap);
 }
 
 export function getFilePath(key: string) {

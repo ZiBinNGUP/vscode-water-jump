@@ -51,7 +51,7 @@ function registerDefinition(context) {
                 }
                 else {
                     for (let i = 0; i < lines.length; i++) {
-                        if (new RegExp(`[ ]+${word}\\W`).test(lines[i])) {
+                        if (new RegExp(`${word}.*function`).test(lines[i])) {
                             row = i;
                             col = 0;
                             isMatch = true;

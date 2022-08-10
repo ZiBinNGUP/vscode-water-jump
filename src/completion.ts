@@ -6,6 +6,8 @@ export function registerCompletion(context: vscode.ExtensionContext) {
 		provideCompletionItems: async (document, position, token, context) => {
 			const line = document.lineAt(position);
 			const lineText = line.text.substring(0, position.character - 1);
+			let symbols = await getSymbols(document);
+			console.log("symbols: ", symbols[0]);
             const result = lineText.match(/\w+$|(?<=getComponent\("|')\w+/);
 			if (!result) {
 				return;
