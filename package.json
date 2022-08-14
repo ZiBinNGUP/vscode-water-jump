@@ -12,8 +12,14 @@
 		"Other"
 	],
 	"activationEvents": [
-		"onLanguage:javascript"
+		"*"
 	],
+	"contributes": {
+		"commands": {
+			"command": "test",
+			"title": "test"
+		}
+	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/potato47/vscode-cocos-creator-js"
