@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { getSymbols, convertCCSymbols, getFilePath, excludeSet, getFileContent } from './utils';
 
 export function registerCompletion(context: vscode.ExtensionContext) {
+	return;
 	context.subscriptions.push(vscode.languages.registerCompletionItemProvider('javascript', {
 		provideCompletionItems: async (document, position, token, context) => {
 			const line = document.lineAt(position);

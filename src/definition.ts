@@ -8,7 +8,7 @@ export function registerDefinition(context: vscode.ExtensionContext) {
             const word = document.getText(document.getWordRangeAtPosition(position));
             const line = document.lineAt(position);
             const workDir = getWorkDirByFilePath(document.uri.path);
-            const result = line.text.match(new RegExp(`ms\\..*${word}`));
+            const result = line.text.match(new RegExp(`ms[\\w.]*${word}`));
             if (!result || !workDir) {
                 return;
             }
@@ -31,8 +31,8 @@ export function registerDefinition(context: vscode.ExtensionContext) {
                 if (!symbol) {
                     return new vscode.Location(moduelUri, new vscode.Position(0, 0));
                 }
-                symbols = symbol.children;
             }
+            symbols = symbol.children;
             for (let i = 3; i < symbolNames.length; i++) {
                 const tSymbolName = symbolNames[i];
                 symbol = symbols?.find(symbol => symbol.name === tSymbolName);
