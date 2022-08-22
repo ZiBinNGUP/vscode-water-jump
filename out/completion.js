@@ -15,48 +15,63 @@ function registerCompletion(context) {
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider('javascript', {
         provideCompletionItems: (document, position, token, context) => __awaiter(this, void 0, void 0, function* () {
             const line = document.lineAt(position);
-            const lineText = line.text.substring(0, position.character - 1);
-            let symbols = yield utils_1.getSymbols(document);
-            console.log("symbols: ", symbols[0]);
-            const result = lineText.match(/\w+$|(?<=getComponent\("|')\w+/);
-            if (!result) {
+            const lineText = line.text.substring(0, position.character);
+            const workDir = utils_1.getWorkDirByFilePath(document.uri.path);
+            let result = lineText.match(/ms[\w.]*$/);
+            if (!result || !workDir) {
                 return;
             }
-            const module = result[0];
-            if (module === 'this') {
-                let symbols = yield utils_1.getSymbols(document);
-                symbols = utils_1.convertCCSymbols(symbols, document);
-                const completionItems = [];
-                const uniqueSet = new Set();
-                symbols.forEach(symbol => {
-                    if (!utils_1.excludeSet.has(symbol.name) && !uniqueSet.has(symbol.name)) {
-                        const kindName = vscode.SymbolKind[symbol.kind];
-                        const completionItemKind = vscode.CompletionItemKind[kindName] || vscode.CompletionItemKind.Field;
-                        completionItems.push(new vscode.CompletionItem(symbol.name, completionItemKind));
-                        uniqueSet.add(symbol.name);
-                    }
-                });
+            result = result[0].split('.');
+            if (result.length <= 1) {
+                return;
+            }
+            if (result.length <= 2) {
+                let completionItems = [];
+                for (let module in utils_1.fileMap[workDir]) {
+                    completionItems.push(new vscode.CompletionItem(module, vscode.CompletionItemKind.Module));
+                }
+                for (let module in utils_1.fileMap["project_modules"]) {
+                    completionItems.push(new vscode.CompletionItem(module, vscode.CompletionItemKind.Module));
+                }
+                for (let module in utils_1.fileMap["node_modules/@water"]) {
+                    completionItems.push(new vscode.CompletionItem(module, vscode.CompletionItemKind.Module));
+                }
                 return completionItems;
             }
-            else {
-                const filePath = utils_1.getFilePath(module);
-                if (!filePath) {
+            const moduleName = result[1];
+            const moduleUri = utils_1.getModuleUriByModuleName(moduleName, workDir);
+            if (!moduleUri) {
+                return;
+            }
+            let moduleSymbolSet = new Map();
+            let moduleSymbols = yield vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', moduleUri);
+            if (!moduleSymbols) {
+                return;
+            }
+            moduleSymbols.forEach(v => {
+                if (v.name !== '<unknown>') {
+                    moduleSymbolSet.set(v.name, v);
                     return;
                 }
-                const fileText = utils_1.getFileContent(filePath);
-                const result = fileText.match(/(?<=\n[ ]+)\w+(?=:|\()/g);
-                if (result) {
-                    const completionItems = [];
-                    const uniqueSet = new Set();
-                    result.forEach(key => {
-                        if (!utils_1.excludeSet.has(key) && !uniqueSet.has(key)) {
-                            completionItems.push(new vscode.CompletionItem(key, vscode.CompletionItemKind.Field));
-                            uniqueSet.add(key);
-                        }
-                    });
-                    return completionItems;
+                v.children.forEach(t => moduleSymbolSet.set(t.name, t));
+            });
+            if (result.length <= 3) {
+                let completionItems = [];
+                moduleSymbolSet.forEach(({ name }) => completionItems.push(new vscode.CompletionItem(name, vscode.CompletionItemKind.Module)));
+                return completionItems;
+            }
+            let symbol = moduleSymbolSet.get(result[2]);
+            if (!symbol || !symbol.children) {
+                return;
+            }
+            for (let symbolName of result.slice(3, -1)) {
+                symbol = symbol.children.find(c => c.name === symbolName);
+                if (!symbol || !symbol.children) {
+                    return;
                 }
             }
+            console.log(symbol.children);
+            return symbol.children.map(({ name }) => { return new vscode.CompletionItem(name + "++++bin", vscode.CompletionItemKind.Module); });
         }),
         resolveCompletionItem: () => {
             return null;

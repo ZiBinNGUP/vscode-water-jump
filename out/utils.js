@@ -146,4 +146,39 @@ function goToSymbol(document, symbolName) {
     });
 }
 exports.goToSymbol = goToSymbol;
+function getModuleUriByModuleName(moduleName, workDir) {
+    if (moduleName === "user_msg_define") {
+        moduleName = "user_define";
+    }
+    let modulePath = getFilePath(moduleName, workDir);
+    if (!modulePath) {
+        return;
+    }
+    return vscode.Uri.parse(modulePath);
+}
+exports.getModuleUriByModuleName = getModuleUriByModuleName;
+function getSymbolByName(moduleUri, symbolNameList) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let symbols = yield vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider', moduleUri);
+        let moduleExports = symbols === null || symbols === void 0 ? void 0 : symbols.find(symbol => symbol.name === '<unknown>');
+        let symbol = symbols === null || symbols === void 0 ? void 0 : symbols.find(symbol => symbol.name === symbolNameList[0]);
+        if (!symbol) {
+            if (moduleExports) {
+                symbols = moduleExports === null || moduleExports === void 0 ? void 0 : moduleExports.children;
+                symbol = symbols === null || symbols === void 0 ? void 0 : symbols.find(symbol => symbol.name === symbolNameList[0]);
+            }
+        }
+        if (!symbol) {
+            return;
+        }
+        symbols = symbol.children;
+        for (let i = 3; i < symbolNameList.length; i++) {
+            const tSymbolName = symbolNameList[i];
+            symbol = symbols === null || symbols === void 0 ? void 0 : symbols.find(symbol => symbol.name === tSymbolName);
+            symbols = symbol === null || symbol === void 0 ? void 0 : symbol.children;
+        }
+        return symbol;
+    });
+}
+exports.getSymbolByName = getSymbolByName;
 //# sourceMappingURL=utils.js.map
