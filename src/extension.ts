@@ -6,7 +6,7 @@ import { registerCompletion } from './completion';
 export function activate(context: vscode.ExtensionContext) {
 	console.log('activate');
 	registerDefinition(context);
-	// registerCompletion(context);
+	registerCompletion(context);
 	updateFileMap();
 	vscode.workspace.onDidCreateFiles(() => {
 		updateFileMap();

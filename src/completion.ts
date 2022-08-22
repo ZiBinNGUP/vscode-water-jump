@@ -1,52 +1,71 @@
 import * as vscode from 'vscode';
-import { getSymbols, convertCCSymbols, getFilePath, excludeSet, getFileContent } from './utils';
+import { getSymbols, convertCCSymbols, getFilePath, excludeSet, getFileContent, getWorkDirByFilePath, fileMap, getModuleUriByModuleName, getSymbolByName } from './utils';
 
 export function registerCompletion(context: vscode.ExtensionContext) {
-	return;
 	context.subscriptions.push(vscode.languages.registerCompletionItemProvider('javascript', {
 		provideCompletionItems: async (document, position, token, context) => {
 			const line = document.lineAt(position);
-			const lineText = line.text.substring(0, position.character - 1);
-			let symbols = await getSymbols(document);
-			console.log("symbols: ", symbols[0]);
-            const result = lineText.match(/\w+$|(?<=getComponent\("|')\w+/);
-			if (!result) {
+			const lineText = line.text.substring(0, position.character);
+			const workDir = getWorkDirByFilePath(document.uri.path);
+            let result = lineText.match(/ms[\w.]*$/);
+			if (!result || !workDir) {
 				return;
 			}
-			const module = result[0];
-			if (module === 'this') {
-				let symbols = await getSymbols(document);
-				symbols = convertCCSymbols(symbols, document);
-				const completionItems: vscode.CompletionItem[] = [];
-				const uniqueSet = new Set();
-				symbols.forEach(symbol => {
-					if (!excludeSet.has(symbol.name) && !uniqueSet.has(symbol.name)) {
-						const kindName = vscode.SymbolKind[symbol.kind];
-						const completionItemKind: vscode.CompletionItemKind = vscode.CompletionItemKind[kindName as any] as any || vscode.CompletionItemKind.Field;
-						completionItems.push(new vscode.CompletionItem(symbol.name, completionItemKind));
-						uniqueSet.add(symbol.name);
-					}
-				});
+			result = result[0].split('.');
+			if (result.length <= 1) {
+				return;
+			}
+			
+			if (result.length <= 2) {
+				let completionItems: vscode.CompletionItem[] = [];
+				for (let module in fileMap[workDir]) {
+					completionItems.push(new vscode.CompletionItem(module, vscode.CompletionItemKind.Module));
+				}
+				for (let module in fileMap["project_modules"]) {
+					completionItems.push(new vscode.CompletionItem(module, vscode.CompletionItemKind.Module));
+				}
+				for (let module in fileMap["node_modules/@water"]) {
+					completionItems.push(new vscode.CompletionItem(module, vscode.CompletionItemKind.Module));
+				}
 				return completionItems;
-			} else {
-                const filePath = getFilePath(module);
-                if (!filePath) {
-                    return;
-                }
-				const fileText = getFileContent(filePath);
-				const result = fileText.match(/(?<=\n[ ]+)\w+(?=:|\()/g);
-				if (result) {
-					const completionItems: vscode.CompletionItem[] = [];
-					const uniqueSet = new Set();
-					result.forEach(key => {
-						if (!excludeSet.has(key) && !uniqueSet.has(key)) {
-							completionItems.push(new vscode.CompletionItem(key, vscode.CompletionItemKind.Field));
-							uniqueSet.add(key);
-						}
-					});
-					return completionItems;
+			}
+
+			const moduleName = result[1];
+			const moduleUri = getModuleUriByModuleName(moduleName, workDir);
+			
+			if (!moduleUri) {
+				return;
+			}
+			let moduleSymbolSet = new Map() as Map<string, vscode.DocumentSymbol>;
+			let moduleSymbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', moduleUri);
+			if (!moduleSymbols) {
+				return;
+			}
+			moduleSymbols.forEach(v => {
+				if (v.name !== '<unknown>') {
+					moduleSymbolSet.set(v.name, v)
+					return;
+				}
+				v.children.forEach(t => moduleSymbolSet.set(t.name, t))
+			});
+			if (result.length <= 3) {
+				let completionItems: vscode.CompletionItem[] = [];
+				moduleSymbolSet.forEach(({name}) => completionItems.push(new vscode.CompletionItem(name, vscode.CompletionItemKind.Module)));
+				return completionItems;
+			}
+
+			let symbol = moduleSymbolSet.get(result[2]);
+			if (!symbol || !symbol.children) {
+				return;
+			}
+			for (let symbolName of result.slice(3, -1)) {
+				symbol = symbol.children.find(c => c.name === symbolName);
+				if (!symbol || !symbol.children) {
+					return;
 				}
 			}
+			console.log(symbol.children);
+			return symbol.children.map(({name}) => {return new vscode.CompletionItem(name + "++++bin", vscode.CompletionItemKind.Module)});
 		},
 		resolveCompletionItem: () => {
 			return null;

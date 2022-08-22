@@ -129,3 +129,36 @@ export async function goToSymbol(document: vscode.TextDocument, symbolName: stri
 		activeTextEditor.selection = new vscode.Selection(findSymbol.range.start, findSymbol.range.start);
 	}
 }
+
+export function getModuleUriByModuleName(moduleName: string, workDir: string): vscode.Uri | undefined {
+	if (moduleName === "user_msg_define") {
+		moduleName = "user_define";
+	}
+	let modulePath = getFilePath(moduleName, workDir);
+	if (!modulePath) {
+		return;
+	}
+	return vscode.Uri.parse(modulePath);
+}
+
+export async function getSymbolByName(moduleUri: vscode.Uri, symbolNameList: string[]) {
+	let symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', moduleUri);
+	let moduleExports = symbols?.find(symbol => symbol.name === '<unknown>');
+	let symbol = symbols?.find(symbol => symbol.name === symbolNameList[0]);
+	if (!symbol) {
+		if (moduleExports) {
+			symbols = moduleExports?.children;
+			symbol = symbols?.find(symbol => symbol.name === symbolNameList[0]);
+		}
+	}
+	if (!symbol) {
+		return;
+	}
+	symbols = symbol.children;
+	for (let i = 3; i < symbolNameList.length; i++) {
+		const tSymbolName = symbolNameList[i];
+		symbol = symbols?.find(symbol => symbol.name === tSymbolName);
+		symbols = symbol?.children;
+	}
+	return symbol;
+}
