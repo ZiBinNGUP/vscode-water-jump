@@ -71,7 +71,7 @@ function registerCompletion(context) {
                 }
             }
             console.log(symbol.children);
-            return symbol.children.map(({ name }) => { return new vscode.CompletionItem(name + "++++bin", vscode.CompletionItemKind.Module); });
+            return symbol.children.map(({ name }) => { return new vscode.CompletionItem(name, vscode.CompletionItemKind.Module); });
         }),
         resolveCompletionItem: () => {
             return null;
