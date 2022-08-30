@@ -4,6 +4,7 @@ import { getSymbols, convertCCSymbols, getFilePath, excludeSet, getFileContent, 
 export function registerCompletion(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.languages.registerCompletionItemProvider('javascript', {
 		provideCompletionItems: async (document, position, token, context) => {
+			// test
 			const line = document.lineAt(position);
 			const lineText = line.text.substring(0, position.character);
 			const workDir = getWorkDirByFilePath(document.uri.path);
