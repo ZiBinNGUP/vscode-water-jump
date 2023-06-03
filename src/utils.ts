@@ -41,12 +41,12 @@ export function updateFileMap() {
 		files.forEach(fileName => {
 			const filePath = path.join(currentPath, fileName);
 			const fileStat = fs.statSync(filePath);
-			if (fileStat.isFile() && fileName.endsWith('.js')) {
+			if (fileStat.isFile() && (fileName.endsWith('.js') || fileName.endsWith('.json'))) {
 				const workDir = getWorkDirByFilePath(filePath);
 				if (!workDir) {
 					return;
 				}
-				const key = fileName.substring(0, fileName.length - 3);
+				const key = fileName.split('.')[0];
 				tfileMap[workDir] = tfileMap[workDir] || {};
 				tfileMap[workDir][key] = filePath;
 			} else if (fileStat.isDirectory()) {
@@ -155,7 +155,7 @@ export async function getSymbolByName(moduleUri: vscode.Uri, symbolNameList: str
 		return;
 	}
 	symbols = symbol.children;
-	for (let i = 3; i < symbolNameList.length; i++) {
+	for (let i = 1; i < symbolNameList.length; i++) {
 		const tSymbolName = symbolNameList[i];
 		symbol = symbols?.find(symbol => symbol.name === tSymbolName);
 		symbols = symbol?.children;
