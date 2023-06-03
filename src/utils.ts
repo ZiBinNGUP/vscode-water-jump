@@ -6,8 +6,8 @@ export let fileMap: { [workDir: string]: { [file: string]: string } } = {};
 export const excludeSet = new Set(['extends', 'properties', 'statics', 'editor', 'onLoad', 'start', 'update', 'onEnable', 'onDisable', 'onDestroy', 'if', 'else if', 'for', 'function', 'new', 'return', 'switch', 'throw', 'while']);
 function getWorkRootDir() {
 	const workDir = vscode.workspace.workspaceFolders?.[0].uri.path || "";
-	console.log(workDir);
-	return workDir;
+	// console.log("workDir", workDir);
+	return workDir.slice(1).replace(/\\/g, "/");
 }
 function getWorkDirList() {
 	const workRootDir = getWorkRootDir();
@@ -17,8 +17,10 @@ function getWorkDirList() {
 		"servers/\\w*_server",
 	];
 	return workDirList.map((v) => workRootDir + "/" + v);
+	// return workDirList.map((v) => path.join(workRootDir, v));
 }
 export function getWorkDirByFilePath(filePath: string) {
+	filePath = path.join(filePath).replace(/\\/g, "/");
 	const workDirList = getWorkDirList();
 	let regex = new RegExp(workDirList.join('|'), "");
 	let workDir = regex.exec(filePath);
@@ -38,24 +40,30 @@ export function updateFileMap() {
 	const workRootDir = getWorkRootDir();
 	const walkDir = (currentPath: string, tfileMap: { [workDir: string]: { [file: string]: string } }) => {
 		const files = fs.readdirSync(currentPath);
-		files.forEach(fileName => {
-			const filePath = path.join(currentPath, fileName);
-			const fileStat = fs.statSync(filePath);
-			if (fileStat.isFile() && (fileName.endsWith('.js') || fileName.endsWith('.json'))) {
-				const workDir = getWorkDirByFilePath(filePath);
-				if (!workDir) {
-					return;
+		console.log("currentPath", currentPath);
+		try {
+			files.forEach(fileName => {
+				const filePath = path.join(currentPath, fileName);
+				const fileStat = fs.statSync(filePath);
+				if (fileStat.isFile() && (fileName.endsWith('.js') || fileName.endsWith('.json'))) {
+					const workDir = getWorkDirByFilePath(filePath);
+					if (!workDir) {
+						return;
+					}
+					const key = fileName.split('.')[0];
+					tfileMap[workDir] = tfileMap[workDir] || {};
+					tfileMap[workDir][key] = filePath;
+				} else if (fileStat.isDirectory()) {
+					walkDir(filePath, tfileMap);
 				}
-				const key = fileName.split('.')[0];
-				tfileMap[workDir] = tfileMap[workDir] || {};
-				tfileMap[workDir][key] = filePath;
-			} else if (fileStat.isDirectory()) {
-				walkDir(filePath, tfileMap);
-			}
-		});
+			});
+		} catch (err) {
+			console.error("currentPath", currentPath, err);
+		}
+		
 	};
 	walkDir(workRootDir, tfileMap);
-
+	// console.log("updateFileMap fileMap: ", fileMap);
 	const fileMapKeys = Object.keys(tfileMap);
 	for (let i = 0; i < workDirList.length; i++) {
 		const workDirReg = new RegExp(workDirList[i]);
@@ -138,10 +146,12 @@ export function getModuleUriByModuleName(moduleName: string, workDir: string): v
 	if (!modulePath) {
 		return;
 	}
-	return vscode.Uri.parse(modulePath);
+	return vscode.Uri.file(modulePath);
 }
 
 export async function getSymbolByName(moduleUri: vscode.Uri, symbolNameList: string[]) {
+	try {
+		
 	let symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', moduleUri);
 	let moduleExports = symbols?.find(symbol => symbol.name === '<unknown>');
 	let symbol = symbols?.find(symbol => symbol.name === symbolNameList[0]);
@@ -161,4 +171,7 @@ export async function getSymbolByName(moduleUri: vscode.Uri, symbolNameList: str
 		symbols = symbol?.children;
 	}
 	return symbol;
+} catch (err) {
+	console.error(moduleUri, err);
+}
 }

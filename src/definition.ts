@@ -7,7 +7,7 @@ export function registerDefinition(context: vscode.ExtensionContext) {
             const fileName = document.fileName;
             const word = document.getText(document.getWordRangeAtPosition(position));
             const line = document.lineAt(position);
-            const workDir = getWorkDirByFilePath(document.uri.path);
+            const workDir = getWorkDirByFilePath(document.uri.fsPath);
             if (!workDir) {
                 return;
             }
