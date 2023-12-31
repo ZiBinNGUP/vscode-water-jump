@@ -1,10 +1,10 @@
 {
-	"name": "cocos-creator-js",
-	"displayName": "Cocos Creator JS",
-	"description": "Cocos Creator 支持 JavaScript 函数跳转，扩展代码提示。",
-	"publisher": "nextfu",
-	"version": "0.1.8",
-	"icon": "favicon.ico",
+	"name": "water-jump",
+	"displayName": "Water Jump",
+	"description": "支持Water项目 JavaScript 函数跳转，扩展代码提示。",
+	"publisher": "zibin",
+	"version": "0.1.9",
+	"icon": "fireworks.png",
 	"engines": {
 		"vscode": "^1.44.0"
 	},
@@ -22,7 +22,7 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/potato47/vscode-cocos-creator-js"
+		"url": "https://github.com/ZiBinNGUP/vscode-water-jump.git"
 	},
 	"main": "./out/extension.js",
 	"scripts": {
