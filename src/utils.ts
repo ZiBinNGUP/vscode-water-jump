@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import * as acorn from 'acorn';
+import * as acornWalk from 'acorn-walk';
 
 export let fileMap: { [workDir: string]: { [file: string]: string } } = {};
 export const excludeSet = new Set(['extends', 'properties', 'statics', 'editor', 'onLoad', 'start', 'update', 'onEnable', 'onDisable', 'onDestroy', 'if', 'else if', 'for', 'function', 'new', 'return', 'switch', 'throw', 'while']);
@@ -161,4 +163,131 @@ export async function getSymbolByName(moduleUri: vscode.Uri, symbolNameList: str
 		symbols = symbol?.children;
 	}
 	return symbol;
+}
+
+
+function astLoc2vscodeRange(loc: acorn.SourceLocation | null | undefined): vscode.Range {
+	if (!loc) {
+		return new vscode.Range(0, 0, 0, 0);
+	}
+	return new vscode.Range(loc.start.line - 1, loc.start.column, loc.end.line - 1, loc.end.column);
+}
+
+export function getLocationByAcorn(moduleUri: vscode.Uri, symbolNameList: string[]) : vscode.Location[] | undefined {
+	const contentData = fs.readFileSync(`${moduleUri.path}`, 'utf8');
+	const acron_options = {
+		locations: true,
+	} as acorn.Options;
+	const ast = acorn.parse(contentData, acron_options);
+
+	const firstSymbol = symbolNameList.shift();
+	const lastSymbol = symbolNameList.pop();
+	let locationList: vscode.Location[] = [];
+	if (!firstSymbol) {
+		return;
+	}
+	type NodeHandler = (node: acorn.Node, symbol: string) => acorn.Node | undefined;
+	for (const node of ast.body) {
+		const solution : Record<string, NodeHandler> = {
+			"VariableDeclaration": solutionVariableDeclaration,
+			"ExpressionStatement": solutionExpressionStatement,
+		};
+		const handler = solution[node.type];
+		if (!handler) {
+			continue;
+		}
+		const findNode = handler(node, firstSymbol);
+		if(findNode){
+			if (!lastSymbol) {
+				return [
+					new vscode.Location(moduleUri, astLoc2vscodeRange(findNode.loc))
+				];
+			} else {
+				acornWalk.simple(findNode, {
+						Property: (node: acorn.Node) => {
+							const PropertyNode = node as acorn.Property;
+							const key = PropertyNode.key;
+							if (key.type === "Identifier" && key.name === lastSymbol) {
+								locationList.push(new vscode.Location(moduleUri, astLoc2vscodeRange(PropertyNode.loc)));
+							}
+						}
+					}
+				);
+				if (locationList.length > 0) {
+					return locationList;
+				}
+			}
+			break;
+		}
+	}
+
+	acornWalk.simple(ast, {
+		MethodDefinition: (node: acorn.Node) => {
+			const MethodDefinitionNode = node as acorn.MethodDefinition;
+			const key = MethodDefinitionNode.key;
+			if (key.type === "Identifier" && key.name === lastSymbol) {
+				locationList.push(new vscode.Location(moduleUri, astLoc2vscodeRange(MethodDefinitionNode.loc)));
+			}
+		},
+		ExportNamedDeclaration: (node: acorn.Node) => {
+			
+		}
+	});
+	if (locationList.length > 0) {
+		return locationList;
+	}
+
+	return;
+}
+
+function solutionVariableDeclaration (node: acorn.Node, symbol: string) : acorn.Node | undefined {
+	const VariableDeclarationNode = node as acorn.VariableDeclaration;
+	if (!VariableDeclarationNode.declarations) {
+		return;
+	}
+	for (const declaration of VariableDeclarationNode.declarations) {
+		const id = declaration.id;
+		if (id.type === "Identifier" && id.name === symbol) {
+			console.log(VariableDeclarationNode.loc);
+			return VariableDeclarationNode;
+		}
+	}
+}
+
+function solutionExpressionStatement(node: acorn.Node, symbol: string) : acorn.Node | undefined {
+	const ExpressionStatementNode = node as acorn.ExpressionStatement;
+	const expression = ExpressionStatementNode.expression;
+	if (expression.type === "AssignmentExpression") {
+		const left = expression.left;
+		if (left.type === "MemberExpression") {
+			const property = left.property;
+			const object = left.object;
+			if (property.type === "Identifier" && property.name === symbol && object.type === "Identifier" && object.name === "exports") {
+				return ExpressionStatementNode;
+			}
+		}
+	}
+}
+
+
+export function findNodeByPosition(moduleUri: vscode.Uri, position: vscode.Position) : null | acorn.Node {
+	const acron_options = {
+		locations: true,
+	} as acorn.Options;
+	const contentData = fs.readFileSync(`${moduleUri.path}`, 'utf8');
+    const ast = acorn.parse(contentData, acron_options);
+
+    let targetFunctionNode = null;
+    acornWalk.simple(ast, {
+        CallExpression(node) {
+			if (!node.loc?.start || !node.loc?.end) {
+				return;
+			}
+			if (node.loc?.start?.line <= position.line + 1 && node.loc?.end.line >= position.line + 1 && node.loc?.start.column <= position.character && node.loc?.end.column >= position.character) {
+				targetFunctionNode = node;
+			}
+        }
+    });
+
+    return targetFunctionNode;
 }
