@@ -3,7 +3,7 @@
 	"displayName": "Water Jump",
 	"description": "支持Water项目 JavaScript 函数跳转，扩展代码提示。",
 	"publisher": "zibin",
-	"version": "0.1.9",
+	"version": "0.1.11",
 	"icon": "fireworks.png",
 	"engines": {
 		"vscode": "^1.44.0"

@@ -283,9 +283,16 @@ export function findNodeByPosition(moduleUri: vscode.Uri, position: vscode.Posit
 			if (!node.loc?.start || !node.loc?.end) {
 				return;
 			}
-			if (node.loc?.start?.line <= position.line + 1 && node.loc?.end.line >= position.line + 1 && node.loc?.start.column <= position.character && node.loc?.end.column >= position.character) {
-				targetFunctionNode = node;
+			if (node.loc?.start?.line > position.line + 1 || node.loc?.end.line < position.line + 1) {
+				return;
 			}
+			if (node.loc.start.line === position.line + 1 && node.loc.start.column > position.character) {
+				return;
+			}
+			if (node.loc.end.line === position.line + 1 && node.loc.end.column < position.character) {
+				return;
+			}
+			targetFunctionNode = node;
         }
     });
 

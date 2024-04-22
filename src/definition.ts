@@ -83,10 +83,6 @@ async function handel_config(line: vscode.TextLine, word: string, workDir: strin
 }
 
 async function handel_rpc_func(line: vscode.TextLine, word: string, workDir: string, document: vscode.TextDocument, position: vscode.Position) {
-    const result = line.text.match(new RegExp(`ms\\.proxy_agent_mgr\\..*${word}`));
-    if (!result) {
-        return;
-    }
     const node = findNodeByPosition(document.uri, position);
     if (!node) {
         return;
