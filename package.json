@@ -3,7 +3,7 @@
 	"displayName": "Water Jump",
 	"description": "支持Water项目 JavaScript 函数跳转，扩展代码提示。",
 	"publisher": "zibin",
-	"version": "0.1.11",
+	"version": "0.1.13",
 	"icon": "fireworks.png",
 	"engines": {
 		"vscode": "^1.44.0"
@@ -12,7 +12,8 @@
 		"Other"
 	],
 	"activationEvents": [
-		"*"
+		"workspaceContains:project_modules",
+		"onLanguage:javascript"
 	],
 	"contributes": {
 		"commands": {
@@ -32,7 +33,8 @@
 		"watch": "tsc -watch -p ./",
 		"pretest": "yarn run compile && yarn run lint",
 		"test": "node ./out/test/runTest.js",
-		"acorn": "acorn"
+		"acorn": "acorn",
+		"build": "vsce package -o ./out/app"
 	},
 	"devDependencies": {
 		"@types/glob": "^7.1.1",

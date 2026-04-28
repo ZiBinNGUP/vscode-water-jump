@@ -1,35 +1,40 @@
 import * as vscode from 'vscode';
-import { updateFileMap, getSymbols } from './utils';
+import { updateFileMap, clearAstCache } from './utils';
 import { registerDefinition } from './definition';
 import { registerCompletion } from './completion';
+import { registerHover } from './hover';
 
 export function activate(context: vscode.ExtensionContext) {
-	console.log('activate');
-	registerDefinition(context);
-	registerCompletion(context);
-	updateFileMap();
-	vscode.workspace.onDidCreateFiles(() => {
-		updateFileMap();
-	});
-	vscode.workspace.onDidDeleteFiles(() => {
-		updateFileMap();
-	});
+    console.log('[Water Jump] Extension activated');
 
-	// vscode.commands.registerCommand("test", async () => {
-	// 	let editor = vscode.window.activeTextEditor;
-	// 	if (!editor) { return; }
-	// 	let document = editor.document;
-	// 	let symbols = await getSymbols(document);
-	// 	console.log("symbols: ", symbols);
-	// });
+    registerDefinition(context);
+    registerCompletion(context);
+    registerHover(context);
 
-	// vscode.languages.registerHoverProvider('javascript', {
-	// 	provideHover(document, position, token) {
-	// 	  return {
-	// 		contents: ['Hover Content']
-	// 	  };
-	// 	}
-	//   });
+    // 初始化文件映射（不再依赖 activeTextEditor）
+    updateFileMap().then(() => {
+        console.log('[Water Jump] File map updated');
+    }).catch(err => {
+        console.error('[Water Jump] Failed to update file map:', err);
+    });
+
+    // 监听文件系统变化
+    context.subscriptions.push(vscode.workspace.onDidCreateFiles(() => {
+        updateFileMap();
+    }));
+    context.subscriptions.push(vscode.workspace.onDidDeleteFiles(() => {
+        updateFileMap();
+    }));
+    context.subscriptions.push(vscode.workspace.onDidRenameFiles(() => {
+        updateFileMap();
+    }));
+
+    // 文件保存时清除对应的 AST 缓存
+    context.subscriptions.push(vscode.workspace.onDidSaveTextDocument((document) => {
+        clearAstCache(document.uri.fsPath);
+    }));
 }
 
-export function deactivate() { }
+export function deactivate() {
+    clearAstCache();
+}
